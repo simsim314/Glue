@@ -1,11 +1,11 @@
 import golly as g 
 from copy import copy
 
-destinationPath = "C:\\Users\\SimSim314\\Glue\\Monochromatic\\"
+destinationPath = "C:\\Users\\SimSim314\\Glue\\Monochromaticv2\\"
 gld = g.parse("3o$o$bo!")
 blck = g.parse("2o$2o!")
-existing = []
-
+existingDic = {}
+existingKeys = []
 
 def FindActive():
 
@@ -151,6 +151,8 @@ def FindAllHs(cells):
 		
 		if s == str(g.getcells(g.getrect())):
 			
+			key = str(rect) + ":" + str(g.getpop())
+			
 			SLs = []
 			
 			if rect[2] < 8 and rect[3] < 8:
@@ -167,12 +169,16 @@ def FindAllHs(cells):
 					SLs[0][o][1] -= y1
 
 				answer[0].append([i, x1, y1, SLs[0]])
-				
-			if s in existing:
-				continue 
-			else: 
-				existing.append(s)
 			
+			if not (key in existingKeys):
+				existingDic[key] = []
+				existingKeys.append(key)
+				
+			if s in existingDic[key]:
+				continue 
+			else:
+				existingDic[key].append(s)
+		
 			answer[1].append(i)
 			
 	return answer 
@@ -186,7 +192,9 @@ def EvolveRecipes(recipes):
 	
 	for recipe in recipes:
 		cnt += 1
-		g.show(str(cnt) + "/" + str(len(recipes)))
+		
+		if cnt % 100 == 0:
+			g.show(str(cnt) + "/" + str(len(recipes)))
 		
 		EvolveRecipe(recipe)
 		cells = g.getcells(g.getrect())
