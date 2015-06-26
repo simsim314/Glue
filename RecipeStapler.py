@@ -332,8 +332,6 @@ class SlowSalvoConstructor:
 		ins = open(path, "r" )
 		array = []
 		
-		bestDxRatio = 0
-		bestdx = -1
 		bestdxrecipe = []
 		
 		for line in ins:
@@ -349,15 +347,14 @@ class SlowSalvoConstructor:
 			for i in xrange(0, len(vals[1])):
 				vals[1][i] = int(vals[1][i])
 			
-			if x < 0 and -x / len(vals[1]) > bestDxRatio: 
-				bestDxRatio = -x / len(vals[1])
-				bestdx = [x, y]
+			if x - y == -12 and len(bestdxrecipe) == 0:
 				bestdxrecipe = vals[1]
 				
-			array.append( [x, y, vals[1]] )
+			array.append([x, y, vals[1]])
 			
 		if report:
-			g.show(str([bestDxRatio, bestdx]))
+			g.show(str(bestdxrecipe))
+			g.setclipstr(str(bestdxrecipe))
 			
 		ins.close()
 		
@@ -404,8 +401,8 @@ sls.append(g.parse("2o$obo$b2o!", 0, 0)) # 8 (1, 1)- ship
 sls.append(g.parse("2bo$bobo$obo$2o!", -2, 0)) #9 longboat edge down (-1, 1)
 sls.append(g.parse("2bo$bobo$o2bo$b2o!", -2, 0)) # 10 loaf diagonal up (-1,1)
 
-#salvo = SlowSalvoConstructor("C:\\Users\\SimSim314\\Glue\\70374[[0, 0], [1, 0], [0, 1], [1, 1]].txt", SLfiles, sls)
-salvo = SlowSalvoConstructor("C:\\Users\\SimSim314\\Glue\\375448[[0, 0], [1, 0], [0, 1], [1, 1]].txt", SLfiles, sls)
+salvo = SlowSalvoConstructor("C:\\Users\\SimSim314\\Glue\\70374[[0, 0], [1, 0], [0, 1], [1, 1]].txt", SLfiles, sls)
+#salvo = SlowSalvoConstructor("C:\\Users\\SimSim314\\Glue\\375448[[0, 0], [1, 0], [0, 1], [1, 1]].txt", SLfiles, sls)
 #-4, -13, -8, -19, -11, 1, -19
 
 
@@ -524,11 +521,29 @@ def PlaceAdjustment(slv):
 #PlaceAllRecipesForIdx(salvo, 11)
 #MWSS3SLsEdgeShooter(salvo)
 #HWSS3SLsEdgeShooter(salvo)
+adjustmentrecipes = [[-4, -13, -14, 4, 5], [-4, -6, -8, -11, -3, -12], [-4, -11, -14, -5, 9, 6], [-4, -13, -8, -9, -12, -7], [-4, -13, -13, -11, -16, -4], [-4, -13, -13, -12, 4, -16], [-4, 4, -10, -13, -4], [-4, -6, -13, -10, -18, -9]]
+hwss = [-4, -6, -8, -9, -17, -35, -37, -39, -47, -60, -55, -37, -35, -27, -41, -48, -41, -40, -30, -21, -21, -23, -11, -19, -31, -5, -7, -9, -10, -18, -34]
+tail = [-10, -27]
 
-salvo.GotoAdvanced(-12, 51, -1, 15)
+moveRecipes= [[5, 15, -9, 5], [-4, -14, -1, 11, 5, 28], [-4, -13, -4, -8, -5], [6, 7], [5, 15, -17, 13], [-5, -6, -7], [5, -5, 4, 7, 12]]
+blockMoves= [[30,-1], [-6, 5], [32, 5], [20, 5], [14, 5], [25,5], [10, 5]]
+destruction = [[-11], [0,0], [-30,-20], [-20,-30, -10], [-9], [-39], [-9, -5]]
+salvo.AppendExternalRecipe(hwss)
+salvo.block0 = [22, 5]
+salvo.AppendExternalRecipe(moveRecipes[6])
+salvo.block0 = blockMoves[6]
+salvo.AppendExternalRecipe(adjustmentrecipes[6])
+salvo.block0 = [0, 0]
+salvo.AppendExternalRecipe(destruction[6])
+salvo.AppendExternalRecipe(tail)
 salvo.PlaceRecipe()
-g.putcells(salvo.init)
-g.setclipstr(str(salvo.recipe))
+#g.setclipstr(str(salvo.recipe))
+
+#salvo.GotoAdvanced(-12, 51, -1, 15)
+#salvo.PlaceRecipe()
+#g.putcells(salvo.init)
+#g.setclipstr(str(salvo.recipe))
+
 #salvo.GotoAdvanced(-62, -10, -1)
 #salvo.PlaceRecipe()
 #g.setclipstr(str(salvo.recipe))
