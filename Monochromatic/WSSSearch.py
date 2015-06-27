@@ -1,7 +1,7 @@
 import golly as g 
 from copy import copy
 
-destinationPath = "C:\\Users\\SimSim314\\Glue\\AllWSS\\"
+destinationPath = "C:\\Users\\SimSim314\\Glue\\WSSp2Fast\\"
 gld = g.parse("3o$o$bo!")
 blck = g.parse("2o$2o!")
 existingDic = {}
@@ -21,7 +21,7 @@ def HasEdgeShooter(minx):
 	
 	y = rect[1] + rect[3]
 	
-	if y < 70: 
+	if y < 100: 
 		return False
 		
 	g.run(4)
@@ -191,7 +191,10 @@ def FindAllHs(cells, minx):
 		g.step()
 		g.step()
 		
-		if int(g.getpop()) > 80 or int(g.getpop()) == 0:
+		if int(g.getpop()) > 60:
+			continue 
+			
+		if int(g.getpop()) == 0:
 			continue 
 		
 		if g.getrect()[0] < -120:
@@ -204,11 +207,11 @@ def FindAllHs(cells, minx):
 			
 		rect = g.getrect()
 		
-		if rect[2] > 25 or rect[3] > 25:
+		if rect[2] > 12 or rect[3] > 12:
 			continue
 		
 		s = str(g.getcells(g.getrect()))
-		g.run(1)
+		g.run(2)
 		
 		if s == str(g.getcells(g.getrect())):
 			

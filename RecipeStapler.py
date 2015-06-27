@@ -347,7 +347,7 @@ class SlowSalvoConstructor:
 			for i in xrange(0, len(vals[1])):
 				vals[1][i] = int(vals[1][i])
 			
-			if x - y == -12 and len(bestdxrecipe) == 0:
+			if x - y == -1 and len(bestdxrecipe) == 0:
 				bestdxrecipe = vals[1]
 				
 			array.append([x, y, vals[1]])
@@ -499,7 +499,13 @@ def FinadOptimalRecipe(slv, idx):
 	
 def PlaceAllRecipesForIdx(slv, idx):
 	g.setrule("LifeHistory")
-	for i in xrange(0, len(slv.SLsMoveTable[idx])):
+	
+	if idx >= 0:
+		moveTable = slv.SLsMoveTable[idx]
+	else
+		moveTable = slv.MoveTable
+		
+	for i in xrange(0, len(moveTable)):
 		slv.ApplyRecipeSmart(i, idx)
 		slv.PlaceRecipe(i * 1000, 0, i == 0)
 		slv.Reset()
@@ -515,28 +521,55 @@ def PlaceAdjustment(slv):
 		slv.PlaceRecipe(i * 100, 0, i == 0)
 		slv.Reset()
 
+wssSalvo = SlowSalvoConstructor("C:\\Users\\SimSim314\\Glue\\AllWSS\\7[24].txt", [], [])
+
+
 #PlaceAdjustment(salvo)
 	
 #FinadOptimalRecipe(salvo, 14)
 #PlaceAllRecipesForIdx(salvo, 11)
 #MWSS3SLsEdgeShooter(salvo)
 #HWSS3SLsEdgeShooter(salvo)
-adjustmentrecipes = [[-4, -13, -14, 4, 5], [-4, -6, -8, -11, -3, -12], [-4, -11, -14, -5, 9, 6], [-4, -13, -8, -9, -12, -7], [-4, -13, -13, -11, -16, -4], [-4, -13, -13, -12, 4, -16], [-4, 4, -10, -13, -4], [-4, -6, -13, -10, -18, -9]]
-hwss = [-4, -6, -8, -9, -17, -35, -37, -39, -47, -60, -55, -37, -35, -27, -41, -48, -41, -40, -30, -21, -21, -23, -11, -19, -31, -5, -7, -9, -10, -18, -34]
+#res = [5, -3, 13, 8, -5, -7, -23, -18, 8, -15]
+#salvo.AppendExternalRecipe(res)
+#salvo.PlaceRecipe()
+'''
+hwssAdjusted = [[-4, -6, -8, -9, -17, -35, -37, -39, -47, -60, -55, -37, -35, -27, -41, -48, -41, -40, -30, -21, -21, -23, -11, -19, -31, -5, -7, -9, -10, -18, -34, -12, -2, -26, -12, -35, -44, -45, -27, -26, -11, -10, -27], [-4, -6, -8, -9, -17, -35, -37, -39, -47, -60, -55, -37, -35, -27, -41, -48, -41, -40, -30, -21, -21, -23, -11, -19, -31, -5, -7, -9, -10, -18, -34, -21, -31, -18, -6, -12, 11, 7, 5, 3, 0, 8, -1, 0, 0, -10, -27], [-4, -6, -8, -9, -17, -35, -37, -39, -47, -60, -55, -37, -35, -27, -41, -48, -41, -40, -30, -21, -21, -23, -11, -19, -31, -5, -7, -9, -10, -18, -34, -21, -30, -21, -25, -22, -31, -38, -41, -32, -18, -21, -30, -20, -10, -27], [-4, -6, -8, -9, -17, -35, -37, -39, -47, -60, -55, -37, -35, -27, -41, -48, -41, -40, -30, -21, -21, -23, -11, -19, -31, -5, -7, -9, -10, -18, -34, -11, -10, -19, -28, -23, -24, -27, -22, -20, -30, -10, -10, -27], [-4, -6, -8, -9, -17, -35, -37, -39, -47, -60, -55, -37, -35, -27, -41, -48, -41, -40, -30, -21, -21, -23, -11, -19, -31, -5, -7, -9, -10, -18, -34, -12, -2, -34, -4, -13, -22, -22, -20, -25, -13, -9, -10, -27], [-4, -6, -8, -9, -17, -35, -37, -39, -47, -60, -55, -37, -35, -27, -41, -48, -41, -40, -30, -21, -21, -23, -11, -19, -31, -5, -7, -9, -10, -18, -34, -22, -23, -24, -24, -33, -33, -32, -16, -36, -39, -10, -27], [-4, -6, -8, -9, -17, -35, -37, -39, -47, -60, -55, -37, -35, -27, -41, -48, -41, -40, -30, -21, -21, -23, -11, -19, -31, -5, -7, -9, -10, -18, -34, -12, -22, -13, -10, -5, -9, -11, -18, -15, -23, -14, -9, -5, -10, -27], [-4, -6, -8, -9, -17, -35, -37, -39, -47, -60, -55, -37, -35, -27, -41, -48, -41, -40, -30, -21, -21, -23, -11, -19, -31, -5, -7, -9, -10, -18, -34, -11, -10, -20, -10, -19, -11, -25, -28, -19, -20, -10, -27]]
+hwssAdjusted[6] = [-4, -6, -8, -9, -17, -35, -37, -39, -47, -60, -55, -37, -35, -27, -41, -48, -41, -40, -30, -21, -21, -23, -11, -19, -31, -5, -7, -9, -10, -18, -34, -19, -22, -10, -27]
+adjustmentrecipes = [[-4, -13, -14, 4, 5], [-4, -6, -8, -11, -3, -12], [-4, -11, -14, -5, 9, 6], [-4, -13, -8, -9, -12, -7], [-4, -13, -13, -11, -16, -4], [-4, -13, -13, -12, 4, -16], [-4, -6, -13, -10, -18, -9], [-4, 4, -10, -13, -4]]
+hwss = hwssAdjusted[6]
 tail = [-10, -27]
 
-moveRecipes= [[5, 15, -9, 5], [-4, -14, -1, 11, 5, 28], [-4, -13, -4, -8, -5], [6, 7], [5, 15, -17, 13], [-5, -6, -7], [5, -5, 4, 7, 12]]
-blockMoves= [[30,-1], [-6, 5], [32, 5], [20, 5], [14, 5], [25,5], [10, 5]]
-destruction = [[-11], [0,0], [-30,-20], [-20,-30, -10], [-9], [-39], [-9, -5]]
-salvo.AppendExternalRecipe(hwss)
-salvo.block0 = [22, 5]
-salvo.AppendExternalRecipe(moveRecipes[6])
-salvo.block0 = blockMoves[6]
-salvo.AppendExternalRecipe(adjustmentrecipes[6])
-salvo.block0 = [0, 0]
-salvo.AppendExternalRecipe(destruction[6])
-salvo.AppendExternalRecipe(tail)
-salvo.PlaceRecipe()
+moveRecipes= [[5, 15, -9, 5], [-4, -14, -1, 11, 5, 28], [-4, -13, -4, -8, -5], [6, 7], [5, 15, -17, 13], [-5, -6, -7], [5, -5, 4, 7, 12],[6, 7, -3, 7]]
+blockMoves= [[30,-1], [-6, 5], [32, 5], [20, 5], [14, 5], [25,5], [10, 5], [20, 5]]
+destruction = [[-11], [0,0], [-30,-20], [-20,-30, -10], [-9], [-39], [-9, -5], [-20]]
+
+cells = []
+allRecipes = []
+
+for i in xrange(0, 8):
+	salvo.Reset()
+	salvo.AppendExternalRecipe(hwss)
+	salvo.block0 = [22, 5]
+	salvo.AppendExternalRecipe(moveRecipes[i])
+	salvo.block0 = blockMoves[i]
+	salvo.AppendExternalRecipe(adjustmentrecipes[i])
+	salvo.block0 = [0, 0]
+	salvo.AppendExternalRecipe(destruction[i])
+	salvo.AppendExternalRecipe(tail)
+	salvo.PlaceRecipe()
+	cells.append(g.getcells(g.getrect()))
+	allRecipes.append(salvo.recipe)
+	
+g.new("")
+y = 0
+
+for c in cells:
+	g.putcells(c, 0, y)
+	y += 1000
+
+g.setclipstr(str(allRecipes))
+'''
 #g.setclipstr(str(salvo.recipe))
 
 #salvo.GotoAdvanced(-12, 51, -1, 15)
