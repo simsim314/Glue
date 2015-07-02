@@ -9,6 +9,7 @@
 #include <string.h>
 
 #define N 64
+#define PrimeN 71
 #define CAPTURE_COUNT 10 
 #define MAX_ITERATIONS 200
 
@@ -870,14 +871,20 @@ Locator *State2Locator(LifeState* state)
 {
 	Locator* result = NewLocator();
 	
-	for(int j = 0; j < N; j++)
+	for(int j = 0; j < PrimeN; j++)
 	{
-        for(int i = 0; i < N; i++)
+        for(int i = 0; i < PrimeN; i++)
 		{
-            int val = Get(i, j, state->state);
+			int x = (j * 35 + 17) % PrimeN;
+			int y = (i * 11 + 29) % PrimeN;
+			
+			if(x >= N || y >= N)
+				continue;
+			
+            int val = Get(x, y, state->state);
 			
 			if(val == 1)
-				Add(result, i, j);
+				Add(result, x, y);
 		}
 	}
 	
@@ -1861,14 +1868,17 @@ LifeBox* NewBox(int minx, int miny, int maxx, int maxy)
 
 int IsInside(LifeState* state, LifeBox* box)
 {
-
+	int allZero = YES;
+	
 	for(int i = state->min; i <= state->max; i++)
 	{
 		uint64_t curVal = state->state[i];
 		
 		if(curVal == 0)
 			continue;
-			
+
+		allZero = NO;
+		
 		if(curVal > box->maxVal || curVal < box->minVal)
 			return NO;
 		
@@ -1880,7 +1890,10 @@ int IsInside(LifeState* state, LifeBox* box)
 	
 	}
 	
-	return YES;
+	if(allZero == NO)
+		return YES;
+	else
+		return NO;
 }
 
 int IsInside(LifeBox* box)

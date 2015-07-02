@@ -9,43 +9,20 @@
 #include <string>
 #include <sstream>
 
-class RecipeNode 
-{
-public:
-	RecipeNode* parent;
-	short dist;
-	
-	RecipeNode()
-	{
-		parent = NULL;
-	}
-	
-	RecipeNode(int d)
-	{
-		parent = NULL;
-		dist = d;
-	}
-	
-	RecipeNode* CreateLeaf(short dist)
-	{
-		RecipeNode *newNode = new RecipeNode(dist);
-		newNode->parent = this;
-		return newNode;
-	}
-	
-	void LoadParentVector(std::vector<int>& Hs)
-	{
-		Hs.clear();
-		RecipeNode* curNode = this;
-		
-		while(curNode != NULL)
-		{
-			Hs.push_back(curNode->dist);
-			curNode = curNode->parent;
-		}
-	}
 
-};
+void LoadParentVector(const std::vector<int>& parentIndexes, const std::vector<short>& dists, int idx, std::vector<int>& Hs)
+{
+	Hs.clear();
+	int curIdx = idx;
+	
+	while(curIdx > 0)
+	{
+		Hs.push_back(dists[curIdx]);
+		curIdx = parentIndexes[curIdx];
+	}
+}
+
+
 
 class SearchParams
 {
@@ -123,6 +100,7 @@ public:
 		wssIdx = -1;
 		LifeBox* inner = maxBox;
 		LifeBox* outer = finalBox;
+		bool found = false;
 		
 		for(int i = 0; i < maxIter; i++)
 		{
@@ -131,14 +109,24 @@ public:
 			if(AreEqual(1))
 				break;
 			
-			for(int j = 0; j < wssVec.size(); j++)
+			//if(i%3 == 0 || found)
 			{
-				if(ContainsLocator(wssVec[j]) == YES)
+				for(int j = 0; j < wssVec.size(); j++)
 				{
-					wssIdx = j;
-					return false;
+					if(ContainsLocator(wssVec[j]) == YES)
+					{
+						if(!found)
+						{
+							found = true;
+						}
+						else
+						{	
+							wssIdx = j;
+							return false;
+						}
+					}
 				}
-			}
+			}				
 			
 			if(IsInside(outer) == NO)
 				return false;
@@ -146,7 +134,10 @@ public:
 		
 		if(IsInside(inner) == NO)
 			return false;
-			
+	
+		if(GetPop() > 40)
+			return false; 
+						
 		return true;
 		
 	}
@@ -188,12 +179,10 @@ public:
 
 };
 
-void PutNodeState(const SearchParams& params, RecipeNode* node, std::vector<int>& Hs)
+void PutNodeState(const SearchParams& params, const std::vector<int>& parentIndexes, const std::vector<short>& dists, int idx, std::vector<int>& Hs)
 {
-	if(node == NULL)
-		Hs.clear();
-	else
-		node->LoadParentVector(Hs);
+	
+	LoadParentVector(parentIndexes, dists, idx, Hs);
 		
 	New();
 	
@@ -213,62 +202,65 @@ public:
 	std::vector<int> recipe;
 };
 
-void FlushTempDS(std::vector<RecipeNode*>& tempCurLayer, std::vector<uint64_t> &statesTempVec, std::unordered_set<uint64_t>& existingStates, std::vector<RecipeNode*> &curLayer)
+void FlushTempDS(std::vector<int>& tempParentIndeces, std::vector<short>& tempDists, std::vector<uint64_t> &statesTempVec, std::unordered_set<uint64_t>& existingStates, std::vector<int>& parentIndeces, std::vector<short>& dists)
 {
-	for(int j = 0; j < tempCurLayer.size(); j++)
+	for(int j = 0; j < tempParentIndeces.size(); j++)
 	{
 		uint64_t hash = statesTempVec[j];
-		RecipeNode* node = tempCurLayer[j];
 		
 		if(existingStates.find(hash) == existingStates.end())
 		{
 			existingStates.insert(hash);
-			curLayer.push_back(node);
-		}
-		else
-		{
-			delete node;
+			parentIndeces.push_back(tempParentIndeces[j]);
+			dists.push_back(tempDists[j]);
 		}
 	}
-				
-	tempCurLayer.clear();
+			
+	if(existingStates.size() > 1000000)
+		existingStates.clear();
+		
+	tempParentIndeces.clear();
+	tempDists.clear();
 	statesTempVec.clear();
 }
 
-void SlowSalvoSearch(const std::vector<RecipeNode*>& prevLayer, std::vector<RecipeNode*> &curLayer, const SearchParams& params, std::vector<SearchResult*>& results)
+void SlowSalvoSearch(int prevLayerStartIndex, std::vector<int>& parentIndeces, std::vector<short>& dists, const SearchParams& params, std::vector<SearchResult*>& results)
 {
 	std::unordered_set<uint64_t> existingStates;
 	int total = 0; 
+	int last = parentIndeces.size();
+	std::vector<int> newParentIndeces;
+	std::vector<short> newDists;
 	
-	#pragma omp parallel shared(existingStates), shared(prevLayer), shared(curLayer), shared(params), shared(results), shared(total)
+	#pragma omp parallel shared(existingStates), shared(newDists), shared(newParentIndeces), shared(parentIndeces), shared(dists), shared(params), shared(results), shared(total)
 	{
 	
-		std::vector<RecipeNode*> tempCurLayer;
+		std::vector<int> tempIndeces;
+		std::vector<short> temtDists;
 		std::vector<uint64_t> statesTempVec;
 		std::vector<int> Hs;
 		int wssIdx; 
 		
-		int reportStep = prevLayer.size() / 10;
+		int reportStep = (last - prevLayerStartIndex) / 25;
 		
 		#pragma omp for
-		for(int i=0; i < prevLayer.size(); ++i)
+		for(int i= prevLayerStartIndex; i < last; ++i)
 		{
 			#pragma omp atomic
 			total++;
 			
 			if(reportStep > 1 && total % reportStep == 0)
-				printf("%d%% of %d\n", 10 * total / reportStep, prevLayer.size());
+				printf("%d%% of %d, %d\n", 4 * total / reportStep, last - prevLayerStartIndex, newParentIndeces.size());
 				
-			if(tempCurLayer.size() > 1000)
+			if(tempIndeces.size() > 1000)
 			{
 				#pragma omp critical
-				FlushTempDS(tempCurLayer, statesTempVec, existingStates, curLayer);
+				FlushTempDS(tempIndeces, temtDists, statesTempVec, existingStates, newParentIndeces, newDists);
 			}
 			
-			RecipeNode* curNode = prevLayer[i];
 			int min;
 			int max;
-			PutNodeState(params, curNode, Hs);
+			PutNodeState(params, parentIndeces, dists, i, Hs);
 			params.GliderRange(min, max);
 			
 			if(min + 30 + params.yPlaceDown < 0)
@@ -290,18 +282,20 @@ void SlowSalvoSearch(const std::vector<RecipeNode*>& prevLayer, std::vector<Reci
 				New();
 				PutState(0);
 				PutState(params.initGliders[j + 30 + params.yPlaceDown]);
-
+				
 				if(params.EvolveToStabilization(wssIdx))
 				{
 					statesTempVec.push_back(GetHash());
-					tempCurLayer.push_back(curNode->CreateLeaf(j));
+						
+					tempIndeces.push_back(i);
+					temtDists.push_back(j);
 				}
 				else if (wssIdx >= 0)
 				{
 					SearchResult* result = new SearchResult();
 					result-> wssIdx = wssIdx;
 					
-					curNode->LoadParentVector(result->recipe);
+					LoadParentVector(parentIndeces, dists, i, result->recipe);
 					std::reverse(result->recipe.begin(), result->recipe.end());
 					result->recipe.push_back(j);
 					
@@ -313,7 +307,13 @@ void SlowSalvoSearch(const std::vector<RecipeNode*>& prevLayer, std::vector<Reci
 		}
 		
 		#pragma omp critical
-		FlushTempDS(tempCurLayer, statesTempVec, existingStates, curLayer);
+		FlushTempDS(tempIndeces, temtDists, statesTempVec, existingStates, newParentIndeces, newDists);
+	}
+	
+	for(int i = 0; i < newParentIndeces.size(); i++)
+	{
+		parentIndeces.push_back(newParentIndeces[i]);
+		dists.push_back(newDists[i]);
 	}
 }
 
@@ -334,27 +334,29 @@ int main()
 {
 	//omp_set_num_threads(1);
 	
-	std::vector<RecipeNode*> prevLayer;
-	prevLayer.push_back(NULL);
+	std::vector<int> indeces;
+	indeces.push_back(0);
 	
-	std::vector<RecipeNode*> curLayer;
+	std::vector<short> dists;
+	dists.push_back(0);
+	
 	std::vector<SearchResult*> results; 
 	
 	SearchParams params(20, 256);
+	int prevLayerStartIndex = 0;
+	int curLayerStartIndex = 0;
 	
 	for(int i = 0;; i++)
 	{
 		std::cout << "Depth " << i + 1 << std::endl;
 		
-		SlowSalvoSearch(prevLayer, curLayer, params, results);
-		
-		prevLayer = curLayer;
-		curLayer.clear();
-		
+		curLayerStartIndex = indeces.size();
+		SlowSalvoSearch(prevLayerStartIndex, indeces, dists, params, results);
+		prevLayerStartIndex = curLayerStartIndex;
 		
 		if(results.size() > 0)
 		{
-			std::string fname = std::string("results_") + std::to_string(i) + std::string(".txt");
+			std::string fname = std::string("results_") + std::to_string(i + 1) + std::string(".txt");
 			std::ofstream myfile;
 			myfile.open(fname);
 			
