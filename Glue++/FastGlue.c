@@ -1,16 +1,17 @@
 #include "LifeAPI.h"
 #include <vector>
-#include <unordered_set>
+#include <unordered_map>
 #include <algorithm>
 #include<omp.h>
 
+#include <iterator>
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <sstream>
 
 
-void LoadParentVector(const std::vector<int>& parentIndexes, const std::vector<short>& dists, int idx, std::vector<int>& Hs)
+void LoadParentVector(const std::vector<unsigned long>& parentIndexes, const std::vector<signed char>& dists, int idx, std::vector<int>& Hs)
 {
 	Hs.clear();
 	int curIdx = idx;
@@ -21,8 +22,6 @@ void LoadParentVector(const std::vector<int>& parentIndexes, const std::vector<s
 		curIdx = parentIndexes[curIdx];
 	}
 }
-
-
 
 class SearchParams
 {
@@ -135,7 +134,7 @@ public:
 		if(IsInside(inner) == NO)
 			return false;
 	
-		if(GetPop() > 40)
+		if(GetPop() > 60)
 			return false; 
 						
 		return true;
@@ -179,7 +178,7 @@ public:
 
 };
 
-void PutNodeState(const SearchParams& params, const std::vector<int>& parentIndexes, const std::vector<short>& dists, int idx, std::vector<int>& Hs)
+void PutNodeState(const SearchParams& params, const std::vector<unsigned long>& parentIndexes, const std::vector<signed char>& dists, int idx, std::vector<int>& Hs)
 {
 	
 	LoadParentVector(parentIndexes, dists, idx, Hs);
@@ -200,43 +199,141 @@ class SearchResult
 public:
 	int wssIdx;
 	std::vector<int> recipe;
+	
+	
 };
 
-void FlushTempDS(std::vector<int>& tempParentIndeces, std::vector<short>& tempDists, std::vector<uint64_t> &statesTempVec, std::unordered_set<uint64_t>& existingStates, std::vector<int>& parentIndeces, std::vector<short>& dists)
+std::string ToString(const std::vector<int>& v)
+{
+	std::stringstream ss;
+	for(size_t i = 0; i < v.size(); ++i)
+	{
+	  if(i != 0)
+		ss << ",";
+		
+	  ss << v[i];
+	}
+	return  ss.str();
+}
+
+void SaveResults(const std::string& fname, const std::vector<SearchResult*>& results)
+{
+	std::ofstream myfile;
+	myfile.open(fname);
+	
+	for(int j = 0; j < results.size(); j++)
+		myfile << ToString(results[j]->recipe) << std::endl;
+	
+	myfile.close();
+}
+
+void SaveSearchTree(std::string fname, const std::vector<unsigned long>& parentIndeces, const std::vector<signed char>& dists)
+{
+	std::ofstream parentFILE(fname + std::string("_indices.txt"), std::ios::out);
+	
+	parentFILE << (int)parentIndeces.size() << "\n";
+	
+	for(std::vector<unsigned long>::const_iterator i = parentIndeces.begin(); i != parentIndeces.end(); ++i) 
+		parentFILE << *i << "\n";
+	
+	parentFILE.close();
+	
+	std::ofstream distsFILE(fname + std::string("_dists.txt"), std::ios::out);
+	
+	for(std::vector<signed char>::const_iterator i = dists.begin(); i != dists.end(); ++i) 
+		distsFILE << (int)*i << "\n";
+	
+	distsFILE.close();
+	
+}
+
+void LoadSearchTree(std::string fname, std::vector<unsigned long>& parentIndeces, std::vector<signed char>& dists)
+{
+	parentIndeces.clear();
+	dists.clear();
+	
+	std::ifstream parentFILE(fname + std::string("_indices.txt"), std::ios::out | std::ofstream::binary);
+	std::ifstream distsFILE(fname + std::string("_dists.txt"), std::ios::out | std::ofstream::binary);
+
+	int size;
+
+	parentFILE >> size;
+	
+	for(int i = 0; i < size; i++)
+	{
+		int pval; 
+		int dval;
+		
+		parentFILE >> pval;
+		parentIndeces.push_back(pval);
+		
+		distsFILE >> dval;
+		dists.push_back((signed char)dval);
+	}
+	
+	parentFILE.close();
+	distsFILE.close();
+	
+}
+
+void FlushTempDS(std::vector<unsigned long>& tempParentIndeces, std::vector<signed char>& tempDists, std::vector<uint64_t> &statesTempVec, std::unordered_map<uint64_t, int>& existingStates, std::vector<unsigned long>& parentIndeces, std::vector<signed char>& dists)
 {
 	for(int j = 0; j < tempParentIndeces.size(); j++)
 	{
 		uint64_t hash = statesTempVec[j];
-		
-		if(existingStates.find(hash) == existingStates.end())
+
+		auto pairIter = existingStates.find(hash);
+
+		if(pairIter == existingStates.end())
 		{
-			existingStates.insert(hash);
+			existingStates[hash] = 1;
 			parentIndeces.push_back(tempParentIndeces[j]);
 			dists.push_back(tempDists[j]);
 		}
+		else
+		{
+			pairIter->second++;
+		}
 	}
-			
-	if(existingStates.size() > 1000000)
+
+	if(existingStates.size() > 2000000)
+	{
+		static std::vector<uint64_t> vals;
+
+		for (const auto& elem: existingStates) 
+		{	
+			if(elem.second >= 4)
+			{
+				vals.push_back(elem.first);
+			}
+		}
+
 		existingStates.clear();
+
+		for(int i = 0; i < vals.size(); i++)
+			existingStates[vals[i]] = 0;
 		
+		vals.clear();
+	}
+
 	tempParentIndeces.clear();
 	tempDists.clear();
 	statesTempVec.clear();
 }
 
-void SlowSalvoSearch(int prevLayerStartIndex, std::vector<int>& parentIndeces, std::vector<short>& dists, const SearchParams& params, std::vector<SearchResult*>& results)
+void SlowSalvoSearch(int prevLayerStartIndex, std::vector<unsigned long>& parentIndeces, std::vector<signed char>& dists, const SearchParams& params, std::vector<SearchResult*>& results, bool searchOnly)
 {
-	std::unordered_set<uint64_t> existingStates;
+	std::unordered_map<uint64_t, int> existingStates;
 	int total = 0; 
 	int last = parentIndeces.size();
-	std::vector<int> newParentIndeces;
-	std::vector<short> newDists;
+	std::vector<unsigned long> newParentIndeces;
+	std::vector<signed char> newDists;
 	
-	#pragma omp parallel shared(existingStates), shared(newDists), shared(newParentIndeces), shared(parentIndeces), shared(dists), shared(params), shared(results), shared(total)
+	#pragma omp parallel shared(searchOnly), shared(existingStates), shared(newDists), shared(newParentIndeces), shared(parentIndeces), shared(dists), shared(params), shared(results), shared(total)
 	{
 	
-		std::vector<int> tempIndeces;
-		std::vector<short> temtDists;
+		std::vector<unsigned long> tempIndeces;
+		std::vector<signed char> temtDists;
 		std::vector<uint64_t> statesTempVec;
 		std::vector<int> Hs;
 		int wssIdx; 
@@ -251,8 +348,8 @@ void SlowSalvoSearch(int prevLayerStartIndex, std::vector<int>& parentIndeces, s
 			
 			if(reportStep > 1 && total % reportStep == 0)
 				printf("%d%% of %d, %d\n", 4 * total / reportStep, last - prevLayerStartIndex, newParentIndeces.size());
-				
-			if(tempIndeces.size() > 1000)
+			
+			if(!searchOnly && tempIndeces.size() > 4000)
 			{
 				#pragma omp critical
 				FlushTempDS(tempIndeces, temtDists, statesTempVec, existingStates, newParentIndeces, newDists);
@@ -285,10 +382,13 @@ void SlowSalvoSearch(int prevLayerStartIndex, std::vector<int>& parentIndeces, s
 				
 				if(params.EvolveToStabilization(wssIdx))
 				{
-					statesTempVec.push_back(GetHash());
-						
-					tempIndeces.push_back(i);
-					temtDists.push_back(j);
+					if(!searchOnly)
+					{
+						statesTempVec.push_back(GetHash());
+							
+						tempIndeces.push_back(i);
+						temtDists.push_back(j);
+					}
 				}
 				else if (wssIdx >= 0)
 				{
@@ -300,14 +400,22 @@ void SlowSalvoSearch(int prevLayerStartIndex, std::vector<int>& parentIndeces, s
 					result->recipe.push_back(j);
 					
 					#pragma omp critical
-					results.push_back(result);
+					{
+						results.push_back(result);
+						
+						if(results.size() % 500 == 0)
+							SaveResults(std::string("results_") + std::to_string(results.size()) + std::string(".txt"), results);
+					}
 				}
 			}
 			
 		}
 		
-		#pragma omp critical
-		FlushTempDS(tempIndeces, temtDists, statesTempVec, existingStates, newParentIndeces, newDists);
+		if(!searchOnly)
+		{
+			#pragma omp critical
+			FlushTempDS(tempIndeces, temtDists, statesTempVec, existingStates, newParentIndeces, newDists);
+		}
 	}
 	
 	for(int i = 0; i < newParentIndeces.size(); i++)
@@ -317,55 +425,44 @@ void SlowSalvoSearch(int prevLayerStartIndex, std::vector<int>& parentIndeces, s
 	}
 }
 
-std::string ToString(const std::vector<int>& v)
-{
-	std::stringstream ss;
-	for(size_t i = 0; i < v.size(); ++i)
-	{
-	  if(i != 0)
-		ss << ",";
-		
-	  ss << v[i];
-	}
-	return  ss.str();
-}
-
 int main()
 {
-	//omp_set_num_threads(1);
+	omp_set_num_threads(5);
 	
-	std::vector<int> indeces;
+	std::vector<unsigned long> indeces;
 	indeces.push_back(0);
 	
-	std::vector<short> dists;
+	std::vector<signed char> dists;
 	dists.push_back(0);
+	
+	int startDepth = 7;
+	LoadSearchTree(std::string("data_depth") + std::to_string(startDepth), indeces, dists);
 	
 	std::vector<SearchResult*> results; 
 	
 	SearchParams params(20, 256);
 	int prevLayerStartIndex = 0;
 	int curLayerStartIndex = 0;
+	int max = 11;
 	
-	for(int i = 0;; i++)
+	for(int i = startDepth; i <= max; i++)
 	{
-		std::cout << "Depth " << i + 1 << std::endl;
+		std::cout << "Depth " << i << std::endl;
 		
 		curLayerStartIndex = indeces.size();
-		SlowSalvoSearch(prevLayerStartIndex, indeces, dists, params, results);
+		SlowSalvoSearch(prevLayerStartIndex, indeces, dists, params, results, i == max);
 		prevLayerStartIndex = curLayerStartIndex;
 		
 		if(results.size() > 0)
 		{
-			std::string fname = std::string("results_") + std::to_string(i + 1) + std::string(".txt");
-			std::ofstream myfile;
-			myfile.open(fname);
-			
-			for(int j = 0; j < results.size(); j++)
-				myfile << ToString(results[j]->recipe) << std::endl;
-			
-			myfile.close();
-			
+			std::string fname = std::string("results_depth") + std::to_string(i) + std::string(".txt");
+			SaveResults(fname, results);
 			std::cout << " Written " << results.size() << " results to file:" << fname << std::endl; 
+		}
+		
+		if(i >= 4)
+		{
+			SaveSearchTree(std::string("data_depth") + std::to_string(i), indeces, dists);
 		}
 		
 	}
