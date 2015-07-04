@@ -1,7 +1,7 @@
 import golly as g 
 import copy
 
-inputFile = "C:\\Users\\SimSim314\\Documents\\GitHub\\FastGlue\\results_73500.txt"
+inputFile = "C:\\Users\\SimSim314\\Documents\\GitHub\\FastGlue\\results_10250.txt"
 
 snakeLineHor = g.parse("2obob2obo$ob2obob2o!")
 snakeLineVer = g.transform(snakeLineHor, -3, 3, 0, 1, 1, 0)
@@ -92,7 +92,7 @@ def HasEdgeShooter(minx):
 					maxX = curx
 					minY = cury
 					
-					parity = (int(g.getgen()) % 4) + (cury % 2) * 4
+					parity = (int(g.getgen()) % 4) + ((cury - curx + 1000000)% 2) * 4
 					
 					if curL == 22:
 						parity += 8
@@ -188,6 +188,8 @@ for edgeType in edgeShooters:
 	
 	dy += 5000
 	result += "---------------\n"
+
+with open(inputFile + "_parsed.txt", "w") as text_file:
+    text_file.write(result)
 	
-g.setclipstr(result)
 g.exit("Finish Success")
