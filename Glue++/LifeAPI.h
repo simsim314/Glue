@@ -1900,3 +1900,51 @@ int IsInside(LifeBox* box)
 {
 	return IsInside(GlobalState, box);
 }
+
+void SyncOrtho(LifeState* up, LifeBox* down)
+{
+	int min = up->min;
+	int max = up->max;
+	
+	if(down->min < min)
+		min = down->min;
+		
+	if(down->max > max)
+		max = down->max;
+		
+	const uint64_t N64 = ~(1ULL << 63); 
+	const uint64_t N1 = ~(1ULL); 
+	
+	const uint64_t I63 = 1ULL << 62; 
+	
+	for(int i = min; i <= max; i++)
+	{
+		uint64_t upVal = up->state[i];
+		uint64_t downVal = down->state[i];
+		
+		upVal &= N64;
+		upVal |= (downVal & 2ULL) << 62 
+		
+		downVal &= N1;
+		downVal |= (upVal & I63) >> 62;
+	}
+	
+	up->min = min;
+	up->max = max;
+	down->min = min;
+	down->max = max;
+	RefitMinMax(up);
+	RefitMinMax(down);
+}
+
+void SyncHoriz(LifeState* left, LifeBox* right)
+{
+	left->state[N - 1] = right->state[1];
+	right->state[0] = left->state[N - 2];
+	
+	if(right->state[0] != 0)
+		RecalculateMinMax(right);
+	
+	if(left->state[N - 1]  != 0)
+		RecalculateMinMax(left);
+}
