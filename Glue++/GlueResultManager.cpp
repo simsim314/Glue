@@ -71,7 +71,7 @@ public:
 		dx = other.dx;
 		dy = other.dy; 
 		dR = other.dR; 
-		
+		isEven = other.isEven; 
 		recipe = other.recipe; 
 	}
 	
@@ -135,15 +135,18 @@ public:
 		
 		MetaRecipe* rec = new MetaRecipe();
 		
-		if(isEven)
-			rec->Init("0,0,0:", true);
-		else
-			rec->Init("0,0,1:", false);
+		rec->Init("0,0,0:", isEven);
+		
+		int D = 0;
+		
+		if(!isEven)
+			D = 1;
 		
 		for(int i = 0; i < data.size(); i++)
 		{
-			data[i][w_2 + rec->dx][h_2 + rec->dy] = new MetaRecipe();
-			data[i][w_2 + rec->dx][h_2 + rec->dy]->Clone(*rec);
+			data[i][w_2][h_2 + D] = new MetaRecipe();
+			data[i][w_2][h_2 + D]->Clone(*rec);
+			data[i][w_2][h_2 + D]->dy += D;
 		}
 	}
 	
@@ -161,13 +164,21 @@ public:
 			for(int y = 0; y < h; y++)
 			{
 				int cy = y + recipe->dy;
-			
+				
+				if(!recipe->isEven)
+					cy--;
+				
 				if(cy < 0 || cy >= h)
 					continue;
 				
 				if(((x + y) % 2 == 1 && recipe->isEven) || ((x + y) % 2 == 0 && !recipe->isEven))
 					continue; 
 				
+				int D = 1;
+				
+				if(recipe->isEven)
+					D = 0;
+					
 				int curD = -x + w_2 - recipe->dR;
 				
 				if(curD < 0)
@@ -181,12 +192,13 @@ public:
 					if(data[i][cx][cy] == NULL)
 					{
 						data[i][cx][cy] = new MetaRecipe();
-						data[i][cx][cy]->Init(data[i][x][y], recipe, x - w_2, y - h_2);
+						data[i][cx][cy]->Init(data[i][x][y], recipe, x - w_2, y - h_2 - D);
+							
 						changed = true; 
 					}
 					else 
 					{
-						changed |= data[i][cx][cy]->Update(data[i][x][y], recipe, x - w_2, y - h_2);
+						changed |= data[i][cx][cy]->Update(data[i][x][y], recipe, x - w_2, y - h_2 - D);
 					}
 				}
 			}
@@ -249,7 +261,6 @@ public:
 	}
 };
 
-
 void ReadFile(const std::string& fileName, vector<MetaRecipe*>& recipes, bool isEven)
 { 
 	std::ifstream infile(fileName);
@@ -281,6 +292,7 @@ void ReadFile(const std::string& fileName, vector<MetaRecipe*>& recipes, bool is
 		
 		MetaRecipe* newRec = new MetaRecipe();
 		newRec->Clone(metaRec);
+		
 		recipes.push_back(newRec);
 	}
 	
@@ -305,10 +317,20 @@ int main()
 	ReadFile("C:\\Users\\SimSim314\\Documents\\GitHub\\GlueNew\\Glue\\MonochromaticP2\\534725[[0, 0], [1, 0], [0, 1], [1, 1]]_Fixed.txt", recipesEven, true);
 	ReadFile("C:\\Users\\SimSim314\\Documents\\GitHub\\GlueNew\\Glue\\MonochromaticP2\\534725[[0, 0], [1, 0], [0, 1], [1, 1]]_Fixed1.txt", recipesOdd, false);
 	
+	/*
+	for(int i = 0; i < recipesOdd.size(); i++)
+	{
+		if(recipesOdd[i]->dR > recipesOdd[i]->dx)
+		{
+			cout << "F" <<  i << "," << recipesOdd[i]->dR << "," << recipesOdd[i]->dx << "," << recipesOdd[i]->dy << ":\n";
+		}
+	}
+	*/
+	
 	RecipeCollector colEven;
 	RecipeCollector colOdd;
-	colEven.Init(70, 180, 25, true);
-	colOdd.Init(70, 180, 25, false);
+	colEven.Init(84, 240, 24, true);
+	colOdd.Init(84, 240, 24, false);
 	
 	bool changed = true; 
 	int cnt = 0; 
@@ -318,8 +340,9 @@ int main()
 		changed = false;
 		
 		changed |= UpdateList(recipesEven, colEven);
-		changed |= UpdateList(recipesEven, colOdd);
 		changed |= UpdateList(recipesOdd, colEven);
+		
+		changed |= UpdateList(recipesEven, colOdd);
 		changed |= UpdateList(recipesOdd, colOdd);
 		
 		cout << cnt++ << endl;
