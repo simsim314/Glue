@@ -2207,3 +2207,4 @@ int IsInside(LifeBox* box)
 {
 	return IsInside(GlobalState, box);
 }
+
